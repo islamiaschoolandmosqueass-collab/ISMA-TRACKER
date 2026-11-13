@@ -118,6 +118,9 @@ footer{max-width:1100px;margin:0 auto;padding:6px 20px 40px;color:var(--sub);fon
    <div class="gc"><label>Headstone cost (Ksh)</label><input id="f_head" type="number" min="0" placeholder="0"></div>
     <div><label>Grave construction form (photo/scan)</label><input id="f_form" type="file" accept="image/*,.pdf" capture="environment"><div class="upProg" id="formProg"></div></div>
     <div><label>Worker / site (optional)</label><input id="f_worker"></div>
+    <div><label>Laborer name</label><input id="f_lname"></div>
+<div><label>Amount to be paid (Ksh)</label><input id="f_lamt" type="number" min="0" placeholder="0"></div>
+<div><label>Date work finished</label><input id="f_ldone" type="date"></div>
     <div><label>Payment received (optional)</label><input id="f_pay" placeholder="30,000/="></div>
   </div>
   <div class="act"><button id="addBtn">Add record</button><button class="sec" id="cancelEd" style="display:none">Cancel edit</button><button class="sec" id="exRec">Export all records (.csv)</button><button class="sec" id="exSum">Export monthly summary (.csv)</button><button class="sec" id="imBtn">Import records (.csv)</button><input type="file" id="imFile" accept=".csv" hidden></div>
@@ -135,7 +138,7 @@ footer{max-width:1100px;margin:0 auto;padding:6px 20px 40px;color:var(--sub);fon
   <h2>Records</h2>
   <div class="row"><input id="search" placeholder="Search by name or R/No..."><select id="fType"><option value="">All types</option><option value="burial">Normal burials</option><option value="construction">Grave constructions</option></select><select id="fCat"><option value="">All categories</option><option>Adult</option><option>Child</option></select><select id="fFlag"><option value="">All records</option><option value="1">Flagged only</option></select></div>
   <div class="act" style="margin:0 0 10px"><button class="sec" id="delSel">Delete selected (0)</button><button class="sec" id="delShown">Delete everything shown</button></div>
-  <div class="tw"><table><thead><tr><th><input type="checkbox" id="ckAll" title="Select all shown"></th><th>R/No</th><th>Date</th><th>Name</th><th>Type</th><th>Cat.</th><th>Timber</th><th>Cement</th><th>Stones</th><th>Sand</th><th>Ballast</th><th>Wire</th><th>Labor</th><th>Headstone</th><th>Total cost</th><th>Form</th><th>Note</th><th></th></tr></thead><tbody id="tbody"></tbody></table><div class="empty" id="emptyMsg" style="display:none">No records for this selection yet.</div></div>
+  <div class="tw"><table><thead><tr><th><input type="checkbox" id="ckAll" title="Select all shown"></th><th>R/No</th><th>Date</th><th>Name</th><th>Type</th><th>Cat.</th><th>Timber</th><th>Cement</th><th>Stones</th><th>Sand</th><th>Ballast</th><th>Wire</th><th>Labor</th><th>Headstone</th><th>Total cost</th><th>Form</th><th>Laborer</th><th>To be paid</th><th>Finished</th><th>Note</th><th></th></tr></thead><tbody id="tbody"></tbody></table><div class="empty" id="emptyMsg" style="display:none">No records for this selection yet.</div></div>
 </div>
 
 <div class="panel">
@@ -278,7 +281,7 @@ function renderRecords(){
 const cell=(r,k)=>(r[k]||0);
 const formCell=r=>r.hasForm?`<span class="frm"><button class="sec" data-form="${r.id}" style="padding:4px 8px">${r.formIsPdf?'PDF':'View'}</button><button class="rm" data-rmid="${r.id}" title="Remove form">✕</button></span>`:'<span class="frmNone">—</span>';
   $('tbody').innerHTML=list.map(r=>{const {flagged,ex}=checkFlag(r);const note=flagged?Object.entries(ex).map(([k,v])=>`+${v} ${k}`).join(', '):'—';
-    return `<tr${flagged?' class="flag"':''}><td><input type="checkbox" class="ck" data-id="${r.id}"${SELK.has(r.id)?' checked':''}></td><td>${r.rno||''}</td><td>${r.date||''}</td><td>${r.name||''}</td><td><span class="tag ${r.type==='burial'?'b':'c'}">${r.type==='burial'?'Burial':'Construction'}</span></td><td>${r.cat}</td>${KEYS.map(k=>`<td>${cell(r,k)}</td>`).join('')}<td>${cell(r,'labor')==='–'?'–':(r.labor||0).toLocaleString()}</td><td>${cell(r,'head')==='–'?'–':(r.head||0).toLocaleString()}</td><td>${recordCost(r).toLocaleString()}</td><td>${formCell(r)}</td><td class="${flagged?'fn':''}">${note}</td><td><button class="ed" data-id="${r.id}" title="Edit">✎</button><button class="x" data-id="${r.id}" title="Delete">✕</button></td></tr>`}).join('');
+    return `<tr${flagged?' class="flag"':''}><td><input type="checkbox" class="ck" data-id="${r.id}"${SELK.has(r.id)?' checked':''}></td><td>${r.rno||''}</td><td>${r.date||''}</td><td>${r.name||''}</td><td><span class="tag ${r.type==='burial'?'b':'c'}">${r.type==='burial'?'Burial':'Construction'}</span></td><td>${r.cat}</td>${KEYS.map(k=>`<td>${cell(r,k)}</td>`).join('')}<td>${cell(r,'labor')==='–'?'–':(r.labor||0).toLocaleString()}</td><td>${cell(r,'head')==='–'?'–':(r.head||0).toLocaleString()}</td><td>${recordCost(r).toLocaleString()}</td><td>${formCell(r)}</td><td>${r.lname||'—'}</td><td>${r.lamt?r.lamt.toLocaleString():'—'}</td><td>${r.ldone||'—'}</td><td class="${flagged?'fn':''}">${note}</td><td><button class="ed" data-id="${r.id}" title="Edit">✎</button><button class="x" data-id="${r.id}" title="Delete">✕</button></td></tr>`}).join('');
 document.querySelectorAll('.x').forEach(b=>b.onclick=guard(async()=>{if(!confirm('Delete this record?'))return;await delRecord(b.dataset.id);records=records.filter(r=>r.id!==b.dataset.id);SELK.delete(b.dataset.id);renderAll()}));
   document.querySelectorAll('.ed').forEach(b=>b.onclick=()=>startEdit(b.dataset.id));
   document.querySelectorAll('.frmThumb').forEach(im=>im.onclick=()=>{$('lbImg').src=im.dataset.view;$('lightbox').classList.add('open')});
@@ -317,12 +320,12 @@ function startEdit(id){
   const r=records.find(x=>x.id===id);if(!r)return;editId=id;
   $('f_type').value=r.type;typeUI();
   ['rno','date','name','cat','worker'].forEach(k=>$('f_'+k).value=r[k]||'');$('f_pay').value=r.payment||'';
-  ['timber','cement','stones','sand','ballast','wire','labor'].forEach(k=>$('f_'+k).value=r[k]||'');$('f_head').value=r.head||'';
+  ['timber','cement','stones','sand','ballast','wire','labor'].forEach(k=>$('f_'+k).value=r[k]||'');$('f_head').value=r.head||'';$('f_lname').value=r.lname||'';$('f_lamt').value=r.lamt||'';$('f_ldone').value=r.ldone||'';
   $('addBtn').textContent='Save changes';$('cancelEd').style.display='';$('logT').textContent='Edit record — '+(r.name||'');
   $('logP').scrollIntoView({behavior:'smooth'});
 }
 function resetForm(){
-  ['f_rno','f_name','f_timber','f_cement','f_stones','f_sand','f_ballast','f_wire','f_labor','f_head','f_worker','f_pay'].forEach(id=>$(id).value='');
+  ['f_rno','f_name','f_timber','f_cement','f_stones','f_sand','f_ballast','f_wire','f_labor','f_worker','f_pay','f_lname','f_lamt','f_ldone'].forEach(id=>$(id).value='');
  editId=null;$('addBtn').textContent='Add record';$('cancelEd').style.display='none';$('logT').textContent='Log a new record';$('f_form').value='';$('formProg').textContent='';
 }
 $('cancelEd').onclick=()=>{resetForm();$('f_date').value=today()};
@@ -485,7 +488,7 @@ $('addBtn').onclick=guard(async()=>{
   if(!v('f_name')){alert('Please enter the deceased name.');return}
   if(!v('f_date')){alert('Please pick the date.');return}
  const r={id:editId||Date.now().toString(36)+Math.random().toString(36).slice(2,6),type:v('f_type'),rno:v('f_rno'),date:v('f_date'),name:v('f_name'),cat:v('f_cat'),worker:v('f_worker'),payment:v('f_pay'),
-    timber:n('f_timber'),cement:n('f_cement'),stones:n('f_stones'),sand:n('f_sand'),ballast:n('f_ballast'),wire:n('f_wire'),labor:n('f_labor'),head:n('f_head')};
+    timber:n('f_timber'),cement:n('f_cement'),stones:n('f_stones'),sand:n('f_sand'),ballast:n('f_ballast'),wire:n('f_wire'),labor:n('f_labor'),head:n('f_head'),lname:v('f_lname'),lamt:n('f_lamt'),ldone:v('f_ldone')};
 const existing=editId?records.find(x=>x.id===editId):null;
 if(existing&&existing.hasForm){r.hasForm=true;r.formIsPdf=existing.formIsPdf}
 const file=$('f_form').files[0];
@@ -512,8 +515,8 @@ async function saveCsv(rows,name){
   const text=rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8;'}));a.download=name;document.body.appendChild(a);a.click();a.remove();
 }
-$('exRec').onclick=()=>saveCsv([['Month','R/No','Date','Name','Type','Category','Timber','Cement','Stones','Sand','Ballast','Wire Mesh','Constructor Cost','Headstone Cost','Total Cost','Worker','Payment','Flag Note'],
-  ...records.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(r=>{const {flagged,ex}=checkFlag(r);return [mk(r),r.rno,r.date,r.name,r.type==='burial'?'Normal burial':'Grave construction',r.cat,r.timber,r.cement,r.stones,r.sand,r.ballast,r.wire,r.labor,r.head,recordCost(r),r.worker,r.payment,flagged?Object.entries(ex).map(([k,v])=>`+${v} ${k}`).join('; '):'']})],'isma_records.csv');
+$('exRec').onclick=()=>saveCsv([['Month','R/No','Date','Name','Type','Category','Timber','Cement','Stones','Sand','Ballast','Wire Mesh','Constructor Cost','Headstone Cost','Total Cost','Worker','Payment','Laborer','Amount to be paid','Date finished','Flag Note'],
+  ...records.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(r=>{const {flagged,ex}=checkFlag(r);return [mk(r),r.rno,r.date,r.name,r.type==='burial'?'Normal burial':'Grave construction',r.cat,r.timber,r.cement,r.stones,r.sand,r.ballast,r.wire,r.labor,r.head,recordCost(r),r.worker,r.payment,r.lname,r.lamt,r.ldone,flagged?Object.entries(ex).map(([k,v])=>`+${v} ${k}`).join('; '):'']})],'isma_records.csv');
 $('exSum').onclick=()=>saveCsv([['Month','Normal burials','Grave constructions','Flagged','Timber','Cement','Stones','Sand','Ballast','Wire mesh','Total cost (Ksh)'],
   ...months().map(m=>{const s=stats(inM(m));return [ml(m),s.b,s.c,s.fl,...KEYS.map(k=>num(s.used[k])),s.cost]})],'isma_monthly_summary.csv');
 
