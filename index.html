@@ -566,6 +566,7 @@ else status('Not configured — tap here to set up Firebase','warn');
 
 firebase.apps.length||firebase.initializeApp(FIREBASE_CONFIG);
 const auth=firebase.auth();
+  auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 let appStarted=false;
 function loginText(e){
   const c=e&&e.code;
