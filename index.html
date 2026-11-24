@@ -82,13 +82,41 @@ footer{max-width:1100px;margin:0 auto;padding:6px 20px 40px;color:var(--sub);fon
 .run:hover h1{animation-play-state:paused}
 @keyframes run{to{transform:translateX(-100%)}}
 @media (prefers-reduced-motion:reduce){.run h1{animation:none;padding-left:0}} 
+ #login{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto;background-color:var(--bg)}
+.lcard{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--gold);border-radius:var(--r);padding:28px 24px;box-shadow:0 6px 24px rgba(0,0,0,.12);text-align:center}
+.lcard .logo{margin:0 auto 14px}
+.lcard h2{font-size:1.2rem;margin:0 0 4px}
+.lcard .sub{margin:0 0 18px}
+#loginForm{display:none;text-align:left}
+#loginForm button[type=submit]{width:100%;margin-top:6px}
+#loginErr{min-height:1.2em;margin:8px 0 0;color:var(--flag);font:.82rem system-ui,sans-serif}
+#loginMsg{margin:8px 0 0;color:var(--g);font:.82rem system-ui,sans-serif}
+.linkbtn{background:none;color:var(--g);padding:6px 0;font-weight:500;text-decoration:underline} 
 </style>
 </head>
 <body>
+  <div id="login">
+  <div class="lcard">
+    <div class="logo"></div>
+    <h2>Sign in to the tracker</h2>
+    <p class="sub" id="loginWait">Checking your sign-in…</p>
+    <form id="loginForm">
+      <p class="sub" style="text-align:center">Only approved ISMA members can open this tracker. Ask the administrator if you need an account.</p>
+      <label for="loginEmail">Email</label>
+      <input id="loginEmail" type="email" autocomplete="username" required>
+      <label for="loginPass">Password</label>
+      <input id="loginPass" type="password" autocomplete="current-password" required>
+      <button type="submit" id="loginBtn">Sign in</button>
+      <div style="text-align:center"><button type="button" class="linkbtn" id="loginForgot">Forgot password?</button></div>
+      <p id="loginErr"></p>
+      <p id="loginMsg"></p>
+    </form>
+  </div>
+</div>
 <header><div class="hd"><div class="logo" role="img" aria-label="ISMA logo"></div><div><div class="kick">ISMA</div><div class="run"><h1>Burial &amp; Grave Construction Tracker</h1></div><p>Islamia School &amp; Mosque Association</p></div></div></header>
 <main>
 
-<div class="bar"><div><label for="yearSel">Year</label><select id="yearSel"></select></div><div><label for="monthSel">Month</label><select id="monthSel"></select></div><div class="pill" id="dbS" style="cursor:pointer" title="Tap to connect or retry">Starting…</div><div class="sub" style="margin:0 0 8px">Pick a year and month — the overview, records and stock below follow it. Choose “Whole year” for a yearly view. A • marks months that have records.</div></div>
+<div class="bar"><div><label for="yearSel">Year</label><select id="yearSel"></select></div><div><label for="monthSel">Month</label><select id="monthSel"></select></div><div class="pill" id="dbS" style="cursor:pointer" title="Tap to connect or retry">Starting…</div><div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><span class="sub" style="margin:0" id="whoEmail"></span><button class="sec" id="logoutBtn" style="padding:6px 12px">Sign out</button></div><div class="sub" style="margin:0 0 8px">Pick a year and month — the overview, records and stock below follow it. Choose “Whole year” for a yearly view. A • marks months that have records.</div></div>
 
 <details class="panel" id="setP">
   <summary>Standards &amp; unit costs</summary>
@@ -164,6 +192,7 @@ footer{max-width:1100px;margin:0 auto;padding:6px 20px 40px;color:var(--sub);fon
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script>
 const $=id=>document.getElementById(id);
   // Wraps a button handler so errors show a message instead of failing silently
@@ -401,13 +430,13 @@ $('lbClose').onclick=()=>$('lightbox').classList.remove('open');
 $('lightbox').onclick=e=>{if(e.target.id==='lightbox')$('lightbox').classList.remove('open')};
 
 // ==== Firebase Realtime Database layer (replaces the old localStorage-backed persistence) ====
-function authFail(e){if(e&&(e.code==='PERMISSION_DENIED')){status('Wrong passcode — tap here to enter it again','bad');return true}return false}
+function authFail(e){if(e&&(e.code==='PERMISSION_DENIED')){status('Access denied — this account is not on the approved list','bad');return true}return false}
 
 function initFirebase(){
   if(!FIREBASE_CONFIG.databaseURL){status('Not configured — tap here to set up Firebase','warn');return}
   if(fbReady)return;
   try{
-    fbApp=firebase.initializeApp(FIREBASE_CONFIG);
+   fbApp=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
     db=firebase.database();
   }catch(e){
     console.error(e);
@@ -462,7 +491,7 @@ function connect(){
   KEYX=k.trim();save('isma_key',KEYX);
   initFirebase();
 }
-$('dbS').onclick=()=>{fbReady?status('Synced with shared database · '+tnow(),'ok'):connect()};
+$('dbS').onclick=()=>{fbReady?status('Synced with shared database · '+tnow(),'ok'):initFirebase()};
 
 const hash=t=>{let h=5381;for(const ch of t)h=((h<<5)+h+ch.charCodeAt(0))|0;return (h>>>0).toString(36)};
 function parseCsv(t){const R=[];let r=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==','){r.push(f);f=''}else if(c=='\n'){r.push(f);R.push(r);r=[];f=''}else if(c!='\r')f+=c}if(f||r.length){r.push(f);R.push(r)}return R}
@@ -521,7 +550,7 @@ $('exSum').onclick=()=>saveCsv([['Month','Normal burials','Grave constructions',
   ...months().map(m=>{const s=stats(inM(m));return [ml(m),s.b,s.c,s.fl,...KEYS.map(k=>num(s.used[k])),s.cost]})],'isma_monthly_summary.csv');
 
 ['search'].forEach(i=>$(i).oninput=renderRecords);['fType','fCat','fFlag'].forEach(i=>$(i).onchange=renderRecords);
-
+function startApp(){
 // Show a local, cached-only view immediately (from the previous session's backup),
 // then connect to Firebase for the live, shared copy.
 records=load('isma_records',[]);
@@ -533,6 +562,46 @@ renderSettings();renderAll();
 if(records.length){const ms=records.map(mk).filter(Boolean).sort();if(ms.length){Y=ms[ms.length-1].slice(0,4);M=ms[ms.length-1].slice(5);renderAll()}}
 if(FIREBASE_CONFIG.databaseURL)initFirebase();
 else status('Not configured — tap here to set up Firebase','warn');
+  }
+
+firebase.apps.length||firebase.initializeApp(FIREBASE_CONFIG);
+const auth=firebase.auth();
+let appStarted=false;
+function loginText(e){
+  const c=e&&e.code;
+  if(['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'].includes(c))return 'Email or password is incorrect.';
+  if(c==='auth/too-many-requests')return 'Too many attempts. Wait a few minutes, then try again.';
+  if(c==='auth/network-request-failed')return 'No internet connection. Check it and try again.';
+  return 'Could not sign in. Try again.';
+}
+$('loginForm').onsubmit=async e=>{
+  e.preventDefault();
+  $('loginErr').textContent='';$('loginMsg').textContent='';
+  $('loginBtn').disabled=true;
+  try{await auth.signInWithEmailAndPassword($('loginEmail').value.trim(),$('loginPass').value)}
+  catch(err){$('loginErr').textContent=loginText(err)}
+  $('loginBtn').disabled=false;
+};
+$('loginForgot').onclick=async()=>{
+  const em=$('loginEmail').value.trim();
+  $('loginErr').textContent='';$('loginMsg').textContent='';
+  if(!em){$('loginErr').textContent='Type your email above first, then tap Forgot password.';return}
+  try{await auth.sendPasswordResetEmail(em);$('loginMsg').textContent='If this email has an account, a reset link has been sent.'}
+  catch(err){$('loginErr').textContent=loginText(err)}
+};
+$('logoutBtn').onclick=()=>auth.signOut();
+auth.onAuthStateChanged(user=>{
+  if(user){
+    $('login').style.display='none';
+    $('whoEmail').textContent=user.email||'';
+    if(!appStarted){appStarted=true;startApp()}
+  }else{
+    if(appStarted){location.reload();return}
+    $('loginWait').style.display='none';
+    $('loginForm').style.display='block';
+    $('login').style.display='flex';
+  }
+});
 </script>
 </body>
 </html>
