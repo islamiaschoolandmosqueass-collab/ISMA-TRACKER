@@ -572,7 +572,7 @@ function loginText(e){
   if(['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'].includes(c))return 'Email or password is incorrect.';
   if(c==='auth/too-many-requests')return 'Too many attempts. Wait a few minutes, then try again.';
   if(c==='auth/network-request-failed')return 'No internet connection. Check it and try again.';
-  return 'Could not sign in. Try again.';
+   return 'Could not sign in ('+(c||'unknown')+'). Try again.';
 }
 $('loginForm').onsubmit=async e=>{
   e.preventDefault();
